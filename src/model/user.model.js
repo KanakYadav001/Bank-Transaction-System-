@@ -9,7 +9,7 @@ const UserScema = new mongo.Schema({
         check : [/^[^@]*amy[^@]*@[^@]+$/,"Invalid Email Format"],
          unique : [true,"Email Must be Unique"]
     },
-    name :{
+    username :{
         type : String,
         required : [true,"Name Is Required For Register"],
     },
@@ -26,7 +26,7 @@ const UserScema = new mongo.Schema({
 
 UserScema.pre('save',async function(next){
     if(!this.isModified('password')){
-        return next()
+        return next
     }
 
 
@@ -35,7 +35,7 @@ UserScema.pre('save',async function(next){
         
         this.password  = hash
 
-        next()
+        next
 })
 
 UserScema.method.comparePassword = async function(password){
