@@ -38,7 +38,7 @@ UserScema.pre('save',async function(next){
         next
 })
 
-UserScema.method.comparePassword = async function(password){
+UserScema.methods.comparePassword = async function(password){
     return await bcrypt.compare(password,this.password)
 }
 

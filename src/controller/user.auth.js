@@ -20,13 +20,13 @@ async function RegisterController(req,res){
 
 
 
-    const hashPassword = await bcrypt.hash(password,10);
+    
 
 
     const User = await UserModel.create({
         username,
         email,
-        password : hashPassword
+        password
     })
 
 
@@ -52,7 +52,48 @@ async function RegisterController(req,res){
 }
 
 
+async function LoginController(req,res){
+
+   const {email,password} = req.body
+ 
+
+   const IsUser = await UserModel.findOne({email}).select('password')
+
+   if(!IsUser){
+    return res.status(401).json({
+        message : "Invalid User Please Register First"
+    })
+   }
+
+   const IsPassword = await IsUser.comparePassword(password)
+
+   if(!IsPassword){
+    return res.status(201).json({
+        message  : "Invalid Password"
+    })
+   }
+
+     const token  = jwt.sign({id : IsUser._id},process.env.JWT_SECRET,{expiresIn: "1h"})
+
+
+    res.cookie('token',token)
+
+
+    res.status(200).json({
+       message : "User Login Sucessfully",
+       user : {
+        id : IsUser._id,
+        password :IsUser.password,
+        email : IsUser.email
+       }
+
+       
+    })
+
+}
+
 
 module.exports={
-    RegisterController
+    RegisterController,
+    LoginController
 }
