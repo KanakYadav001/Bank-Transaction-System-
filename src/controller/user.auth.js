@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken')
 const UserModel = require('../model/user.model')
-const bcrypt = require('bcryptjs')
+const {SendRegisterEmail} = require('../services/email.services')
 
 async function RegisterController(req,res){
  
@@ -36,17 +36,20 @@ async function RegisterController(req,res){
     res.cookie('token',token)
 
 
+   
+
     res.status(201).json({
        message : "User Create Sucessfully",
        user : {
         id : User._id,
         password : User.password,
         email : User.email
-       }
+       }       
 
        
     })
 
+await SendRegisterEmail(User.email,User.username)
 
 
 }
