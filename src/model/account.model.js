@@ -12,11 +12,12 @@ const AcountScema = new mongo.Schema({
     },
 
     status :{
+        type : String,
         enum : {
          values: ["ACTIVE","FROZEN","DELEATED"],
         message : "Accoumt eather active,frozen and deleated"
-        }
-       
+        },
+       default : "ACTIVE"
     },
     currency : {
         type : String,
