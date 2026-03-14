@@ -19,8 +19,8 @@ const TransactionScema = new mongo.Schema({
     status: {
         type : String,
         enum :{
-            values : ["SUCESSFULLY","PENDING","REVERSE","FAIL"],
-           message : "Status Must be SUCESSFULLY ,PENDING,REVERSE and FAIL"
+            values : ["COMPLETED","PENDING","REVERSE","FAIL"],
+           message : "Status Must be COMPLETED ,PENDING,REVERSE and FAIL"
         },
         default : "PENDING",
     },
