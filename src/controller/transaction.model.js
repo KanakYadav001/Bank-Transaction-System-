@@ -1,32 +1,16 @@
 const accountModel = require("../model/account.model");
 const LedgerModel = require("../model/ledger.model");
 const transactionModel = require("../model/transaction.model");
-const mongo = require('mongoose')
-const emailService = require('../services/email.services')
-
-
+const mongo = require("mongoose");
+const { sendTransactionEmail } = require("../services/email.services");
 
 async function PerformTransaction(req, res) {
   const { fromAccount, toAccount, amount, idepotencyKey } = req.body;
 
   if (!fromAccount || !toAccount || !amount || !idepotencyKey) {
-    return res.status(401).json({
+    return res.status(400).json({
       message:
         "fromAccount OR toAccount OR amount OR idepotencyKey is Not Found",
-    });
-  }
-
-  const fromUserAccount = await accountModel.findOne({
-    _id: fromAccount,
-  });
-
-  const toUserAccount = await accountModel.findOne({
-    _id: toAccount,
-  });
-
-  if (!fromUserAccount || !toUserAccount) {
-    return res.status(201).json({
-      message: "FromAccount and ToAccount Not Found",
     });
   }
 
@@ -36,88 +20,105 @@ async function PerformTransaction(req, res) {
 
   if (TransactionAlreadyExits) {
     if (TransactionAlreadyExits.status === "COMPLETED") {
-      res.status(200).json({
+      return res.status(200).json({
         message: "Transaction Fail Sucessfully Completed",
         transaction: TransactionAlreadyExits,
       });
     }
     if (TransactionAlreadyExits.status === "PENDING") {
-      res.status(200).json({
+      return res.status(200).json({
         message: "Transaction Still In Panding Please Wait",
       });
     }
     if (TransactionAlreadyExits.status === "REVERSE") {
-      res.status(500).json({
+      return res.status(400).json({
         message: "Transaction was REVERSED please Retry again",
       });
     }
     if (TransactionAlreadyExits.status === "FAIL") {
-      res.status(500).json({
+      return res.status(400).json({
         message: "Transaction Fail Please Retry",
       });
     }
+  }
+
+  const fromUserAccount = await accountModel.findById(
+     fromAccount
+  );
+
+  const toUserAccount = await accountModel.findById(
+     toAccount
+  );
+
+  if (!fromUserAccount || !toUserAccount) {
+    return res.status(404).json({
+      message: "FromAccount and ToAccount Not Found",
+    });
   }
 
   if (
     fromUserAccount.status !== "ACTIVE" ||
     toUserAccount.status !== "ACTIVE"
   ) {
-    return res.status(500).json({
+    return res.status(400).json({
       message: "Account Not Active Transaction Fail",
     });
   }
-  
-  const Balance  = await fromUserAccount.getBalance()
 
-  if(Balance < amount){
- return res.status(400).json({
-    message : `Insufficient Balance in Your Current Balance is ${Balance}`
-   })
+  const Balance = await fromUserAccount.getBalance();
+
+  if (Balance < amount) {
+    return res.status(400).json({
+      message: `Insufficient Balance in Your Current Balance is ${Balance}`,
+    });
   }
 
+  const session = await mongo.startSession();
+  session.startTransaction();
 
-  const session  = await mongo.startSession()
-  session.startTransaction()
+  const transaction = await transactionModel.create(
+    {
+      toAccount,
+      fromAccount,
+      status: "PENDING",
+      amount,
+      idepotencyKey,
+    },
+    { session },
+  );
 
-  const transaction = await transactionModel.create({
-    toAccount,
-    fromAccount,
-    status : "PENDING",
-    amount,
-    idepotencyKey
-  }, {session})
+  const debitLedgerEntery = await LedgerModel.create(
+    {
+      account: fromAccount,
+      amount,
+      transaction: transaction._id,
+      type: "DEBIT",
+    },
+    { session },
+  );
 
+  const creditLedgerEntery = await LedgerModel.create(
+    {
+      account: toAccount,
+      amount,
+      transaction: transaction._id,
+      type: "CREDIT",
+    },
+    { session },
+  );
 
-  const debitLedgerEntery = await LedgerModel.create({
-    account : fromAccount,
-    amount,
-    transaction : transaction._id,
-    type : "DEBIT"
-  }, {session})
+  transaction.status = "COMPLETED";
+  await transaction.save({ session });
 
-const creditLedgerEntery = await LedgerModel.create({
-    account : toAccount,
-    amount,
-    transaction : transaction._id,
-    type : "CREDIT"
-  }, {session})
+  await session.commitTransaction();
+  session.endSession();
 
-  transaction.status = "COMPLETED"
-  await transaction.save({session})
-
-
-  await session.commitTransaction()
-  session.endSession()
-
-
-
-  await emailService.sendTransactionEmail(req.user.email,req.user.name,amount ,toAccount)
-
+  await sendTransactionEmail(req.user.email, req.user.name, amount, toAccount);
 
   res.status(201).json({
-    message : "Transaction Complete Sucessfully",
-    transaction  : transaction
-  })
+    message: "Transaction Complete Sucessfully",
+    transaction: transaction,
+  });
 }
 
 module.exports = PerformTransaction;
