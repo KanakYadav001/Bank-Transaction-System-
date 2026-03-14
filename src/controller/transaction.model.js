@@ -2,7 +2,7 @@ const accountModel = require("../model/account.model");
 const LedgerModel = require("../model/ledger.model");
 const transactionModel = require("../model/transaction.model");
 const mongo = require('mongoose')
-
+const emailService = require('../services/email.services')
 
 
 
@@ -109,6 +109,15 @@ const creditLedgerEntery = await LedgerModel.create({
   await session.commitTransaction()
   session.endSession()
 
+
+
+  await emailService.sendTransactionEmail(req.user.email,req.user.name,amount ,toAccount)
+
+
+  res.status(201).json({
+    message : "Transaction Complete Sucessfully",
+    transaction  : transaction
+  })
 }
 
 module.exports = PerformTransaction;

@@ -72,6 +72,48 @@ Your Bank Team`;
   await sendEmail(UserEmail, subject, text, html);
 }
 
+async function sendTransactionEmail(email, name, amount, toAccount) {
+
+  const subject = "✅ Transaction Successful";
+
+  const text = `Hello ${name},
+Your transaction of ₹${amount} to account ${toAccount} has been completed successfully.
+If this wasn't you, please contact support immediately.`;
+
+  const html = `
+  <div style="font-family: Arial, sans-serif; background:#f4f6f8; padding:20px;">
+    
+    <div style="max-width:600px; margin:auto; background:white; border-radius:10px; padding:20px;">
+      
+      <h2 style="color:#2ecc71; text-align:center;">Transaction Successful ✅</h2>
+
+      <p>Hello <b>${name}</b>,</p>
+
+      <p>Your transaction has been completed successfully. Here are the details:</p>
+
+      <div style="background:#f9f9f9; padding:15px; border-radius:8px; margin:15px 0;">
+        <p><b>Amount:</b> ₹${amount}</p>
+        <p><b>Transferred To:</b> ${toAccount}</p>
+        <p><b>Status:</b> <span style="color:#2ecc71;">Completed</span></p>
+      </div>
+
+      <p>If you did not make this transaction, please contact our support team immediately.</p>
+
+      <p style="margin-top:25px;">Thanks,<br/><b>Your Bank Team</b></p>
+
+    </div>
+
+    <p style="text-align:center; font-size:12px; color:#999; margin-top:10px;">
+      This is an automated email. Please do not reply.
+    </p>
+
+  </div>
+  `;
+
+  await sendEmail(email, subject, text, html);
+}
+
 module.exports = {
-    SendRegisterEmail
+    SendRegisterEmail,
+    sendTransactionEmail
 };
