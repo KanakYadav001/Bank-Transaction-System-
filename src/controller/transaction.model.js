@@ -1,5 +1,10 @@
 const accountModel = require("../model/account.model");
+const LedgerModel = require("../model/ledger.model");
 const transactionModel = require("../model/transaction.model");
+const mongo = require('mongoose')
+
+
+
 
 async function PerformTransaction(req, res) {
   const { fromAccount, toAccount, amount, idepotencyKey } = req.body;
@@ -61,6 +66,49 @@ async function PerformTransaction(req, res) {
       message: "Account Not Active Transaction Fail",
     });
   }
+  
+  const Balance  = await fromUserAccount.getBalance()
+
+  if(Balance < amount){
+ return res.status(400).json({
+    message : `Insufficient Balance in Your Current Balance is ${Balance}`
+   })
+  }
+
+
+  const session  = await mongo.startSession()
+  session.startTransaction()
+
+  const transaction = await transactionModel.create({
+    toAccount,
+    fromAccount,
+    status : "PENDING",
+    amount,
+    idepotencyKey
+  }, {session})
+
+
+  const debitLedgerEntery = await LedgerModel.create({
+    account : fromAccount,
+    amount,
+    transaction : transaction._id,
+    type : "DEBIT"
+  }, {session})
+
+const creditLedgerEntery = await LedgerModel.create({
+    account : toAccount,
+    amount,
+    transaction : transaction._id,
+    type : "CREDIT"
+  }, {session})
+
+  transaction.status = "COMPLETED"
+  await transaction.save({session})
+
+
+  await session.commitTransaction()
+  session.endSession()
+
 }
 
 module.exports = PerformTransaction;
