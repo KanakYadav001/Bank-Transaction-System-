@@ -2,7 +2,7 @@ const accountModel = require("../model/account.model");
 const LedgerModel = require("../model/ledger.model");
 const transactionModel = require("../model/transaction.model");
 const mongo = require("mongoose");
-const { sendTransactionEmail } = require("../services/email.services");
+const { sendTransactionEmail , sendFailTransactionEmail } = require("../services/email.services");
 
 async function PerformTransaction(req, res) {
   const { fromAccount, toAccount, amount, idepotencyKey } = req.body;

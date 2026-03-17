@@ -113,7 +113,59 @@ If this wasn't you, please contact support immediately.`;
   await sendEmail(email, subject, text, html);
 }
 
+
+async function sendFailTransactionEmail(email, name, amount, toAccount){
+
+
+  const subject =  "Transaction Fail";
+  const text = `
+Hello ${name},
+
+We regret to inform you that your recent transaction of ₹${amount} to account ${toAccount} was unsuccessful.
+
+If any amount has been deducted, it will be refunded automatically within 3–5 working days.
+
+For assistance, please contact our support team.
+
+Regards,
+Bank Support Team
+  `;
+
+  const html = `
+  <div style="font-family: Arial, sans-serif; padding:20px; background:#f4f6f8;">
+    <div style="max-width:600px; margin:auto; background:#ffffff; padding:25px; border-radius:10px;">
+      
+      <h2 style="color:#e53935;">Transaction Failed ❌</h2>
+
+      <p>Hello <b>${name}</b>,</p>
+
+      <p>We regret to inform you that your recent transaction could not be completed.</p>
+
+      <div style="background:#f9f9f9; padding:15px; border-radius:8px; margin:15px 0;">
+        <p><b>Amount:</b> ₹${amount}</p>
+        <p><b>Recipient Account:</b> ${toAccount}</p>
+        <p><b>Status:</b> Failed</p>
+      </div>
+
+      <p>If any amount has been deducted from your account, it will be refunded automatically within <b>3–5 working days</b>.</p>
+
+      <p>If you continue facing issues, please contact our support team.</p>
+
+      <br/>
+
+      <p style="color:#555;">Regards,<br/><b>Bank Support Team</b></p>
+
+    </div>
+  </div>
+  `;
+
+
+ await sendEmail(email, subject, text, html);
+
+}
+
 module.exports = {
     SendRegisterEmail,
-    sendTransactionEmail
+    sendTransactionEmail,
+    sendFailTransactionEmail
 };
