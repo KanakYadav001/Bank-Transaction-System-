@@ -12,6 +12,6 @@ app.use(express.json())
 
 app.use('/api/auth',AuthRoute)
 app.use('/api/account',AccoutRoutes)
-app.use('/api/transaction',transactionRouter)
+app.use('/api',transactionRouter)
 
 module.exports=app

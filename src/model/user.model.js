@@ -18,6 +18,12 @@ const UserScema = new mongo.Schema({
         required : [true,"Password Is Required For Register"],
         minlength : [6,"Min Length is 6 Letters"],
         select : false
+    },
+    systemUser : {
+        type : Boolean,
+        default : false,
+        immutable :true,
+        select : false
     }
 },{
     timestamps : true

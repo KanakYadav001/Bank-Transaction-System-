@@ -3,7 +3,7 @@ const UserModel = require('../model/user.model')
 
 
 
-async function AuthMiddlwware(req,res,next){
+async function AuthMiddleware(req,res,next){
 
     const token = req.cookies.token || req.header.authorization?.split(" ")[1]
 
@@ -30,5 +30,34 @@ async function AuthMiddlwware(req,res,next){
     }
 }
 
+async function AuthSystemUser(req,res){
+    const token  =  req.cookies.token || req.header.authorization?.split(' ')[1]
 
-module.exports=AuthMiddlwware
+
+    if(!token){
+        return res.status(401).json({
+            message : "Token Not Found Please Login OR Register"
+        })
+    }
+
+
+    try {
+     const decoaded  = jwt.verify(token,process.env.JWT_SECRET)
+    const user = await UserModel.findById(decoaded.id)
+ 
+    if(!user){
+        return res.status(401).json({
+            message : "Invalid User !! "
+        })
+    }
+    req.user = user
+
+
+  return  next()
+    }catch(err){
+        return res.status(401).json({
+            message  : "Invalid Token!!"
+        })
+    }
+}
+module.exports={AuthMiddleware,AuthSystemUser}
