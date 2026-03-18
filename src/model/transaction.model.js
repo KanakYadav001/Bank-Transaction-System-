@@ -29,7 +29,7 @@ const TransactionScema = new mongo.Schema({
         required : [true,"Some Ammount needed to perform a transaction"],
         min : [0,"ammount not be negative"]
     },
-    idepotencyKey :{
+    idempotencyKey :{
         type : String,
         required  :[true ,"Idepodency Key is needed to perform a transactions"],
         index : true,

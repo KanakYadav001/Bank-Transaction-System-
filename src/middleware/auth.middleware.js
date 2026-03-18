@@ -30,9 +30,10 @@ async function AuthMiddleware(req,res,next){
     }
 }
 
-async function AuthSystemUser(req,res){
-    const token  =  req.cookies.token || req.header.authorization?.split(' ')[1]
+async function AuthSystemUser(req,res,next){
+    const token  =  req.cookies.token || req.headers.authorization?.split(' ')[1]
 
+   
 
     if(!token){
         return res.status(401).json({
@@ -42,8 +43,10 @@ async function AuthSystemUser(req,res){
 
 
     try {
-     const decoaded  = jwt.verify(token,process.env.JWT_SECRET)
-    const user = await UserModel.findById(decoaded.id)
+
+     const decoded  = jwt.verify(token,process.env.JWT_SECRET)
+
+    const user = await UserModel.findById(decoded.id)
  
     if(!user){
         return res.status(401).json({
@@ -55,6 +58,8 @@ async function AuthSystemUser(req,res){
 
   return  next()
     }catch(err){
+       
+        
         return res.status(401).json({
             message  : "Invalid Token!!"
         })

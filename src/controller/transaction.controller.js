@@ -2,7 +2,10 @@ const accountModel = require("../model/account.model");
 const LedgerModel = require("../model/ledger.model");
 const transactionModel = require("../model/transaction.model");
 const mongo = require("mongoose");
-const { sendTransactionEmail , sendFailTransactionEmail } = require("../services/email.services");
+const {
+  sendTransactionEmail,
+  sendFailTransactionEmail,
+} = require("../services/email.services");
 
 async function PerformTransaction(req, res) {
   const { fromAccount, toAccount, amount, idepotencyKey } = req.body;
@@ -42,13 +45,9 @@ async function PerformTransaction(req, res) {
     }
   }
 
-  const fromUserAccount = await accountModel.findById(
-     fromAccount
-  );
+  const fromUserAccount = await accountModel.findById(fromAccount);
 
-  const toUserAccount = await accountModel.findById(
-     toAccount
-  );
+  const toUserAccount = await accountModel.findById(toAccount);
 
   if (!fromUserAccount || !toUserAccount) {
     return res.status(404).json({
@@ -121,7 +120,109 @@ async function PerformTransaction(req, res) {
   });
 }
 
+async function createInitialFundsTransaction(req, res) {
+  const { toAccount, amount, idempotencyKey } = req.body;
 
-async function 
+  if (!toAccount || !amount || !idempotencyKey) {
+    return res.status(400).json({
+      message: "toAccount OR amount OR idempotencyKey Required",
+    });
+  }
 
-module.exports = PerformTransaction;
+  if (amount <= 0) {
+    return res.status(400).json({
+      message: "Amount must be greater than 0",
+    });
+  }
+
+  const session = await mongo.startSession();
+
+  try {
+    session.startTransaction();
+
+    // 🔹 Idempotency check
+    const existingTx = await transactionModel.findOne({
+      idempotencyKey,
+    });
+
+    if (existingTx) {
+      return res.status(200).json({
+        message: "Transaction already processed",
+        transaction: existingTx,
+      });
+    }
+
+    const toUserAccount = await accountModel.findById({_id : toAccount});
+    if (!toUserAccount) {
+      throw new Error("Invalid Account");
+    }
+   
+   
+    const fromUserAccount = await accountModel.findOne({
+      AccountId : req.user._id,
+    });
+
+    if (!fromUserAccount) {
+      throw new Error("System User Account Not Found");
+    }
+
+    const transaction = new transactionModel(
+        {
+          fromAccount: fromUserAccount._id,
+          toAccount,
+          status: "PENDING",
+          amount,
+          idempotencyKey,
+        });
+
+    // 🔹 CREDIT (toAccount)
+    await LedgerModel.create(
+      [
+        {
+          account: toAccount,
+          amount,
+          transaction: transaction._id,
+          type: "CREDIT",
+        },
+      ],
+      { session }
+    );
+
+    // 🔹 DEBIT (fromUserAccount) ✅ FIXED
+    await LedgerModel.create(
+      [
+        {
+          account: fromUserAccount._id,
+          amount,
+          transaction: transaction._id,
+          type: "DEBIT",
+        },
+      ],
+      { session }
+    );
+
+    transaction.status = "COMPLETED";
+    await transaction.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(201).json({
+      message: "Initial funds transaction successfully completed",
+      transaction: transaction[0],
+    });
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+
+    return res.status(400).json({
+      message: err.message || "Transaction failed",
+    });
+  }
+}
+
+
+module.exports = {
+  createInitialFundsTransaction,
+  PerformTransaction,
+};
