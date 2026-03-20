@@ -12,4 +12,11 @@ app.use("/api/auth", AuthRoute);
 app.use("/api", AccountRoutes);
 app.use("/api", transactionRouter);
 
+
+app.get("/", (req, res) => {
+  res.status(200).json({
+    message: "Welcome to Bank Transaction System API",
+  });
+});
+
 module.exports = app;
