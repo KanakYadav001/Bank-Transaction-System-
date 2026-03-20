@@ -71,11 +71,13 @@ async function PerformTransaction(req, res) {
       message: `Insufficient Balance in Your Current Balance is ${Balance}`,
     });
   }
+let transaction;
+  try{
 
   const session = await mongo.startSession();
   session.startTransaction();
 
-  const [transaction] = await transactionModel.create(
+   transaction = await transactionModel.create(
     [
       {
         toAccount,
@@ -117,6 +119,12 @@ async function PerformTransaction(req, res) {
 
   await session.commitTransaction();
   session.endSession();
+
+}catch(err){
+  res.status(400).json({
+    message : "Transaction Fail Please Try Again After Some Time",
+  })
+}
 
   await sendTransactionEmail(req.user.email, req.user.name, amount, toAccount);
 

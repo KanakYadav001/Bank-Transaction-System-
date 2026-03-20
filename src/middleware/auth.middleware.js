@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
 const UserModel = require("../model/user.model");
-
+const BlacklistModel = require("../model/blacklist.model");
 async function AuthMiddleware(req, res, next) {
   const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
 
@@ -9,6 +9,13 @@ async function AuthMiddleware(req, res, next) {
       message: "Token Not Found Please Login Or Register First",
     });
   }
+ const IsBlackListed = await BlacklistModel.findOne({ token: token })
+
+ if(IsBlackListed){ 
+    return res.status(401).json({
+        message : "Token is BlackListed Please Login Again"
+    })
+ }
 
   try {
     const decoaded = jwt.verify(token, process.env.JWT_SECRET);
@@ -32,6 +39,13 @@ async function AuthSystemUser(req, res, next) {
       message: "Token Not Found Please Login OR Register",
     });
   }
+  const IsBlackListed = await BlacklistModel.findOne({ token: token })
+
+ if(IsBlackListed){ 
+    return res.status(401).json({
+        message : "Token is BlackListed Please Login Again"
+    })
+ }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
