@@ -1,102 +1,81 @@
-const jwt = require('jsonwebtoken')
-const UserModel = require('../model/user.model')
-const {SendRegisterEmail} = require('../services/email.services')
+const jwt = require("jsonwebtoken");
+const UserModel = require("../model/user.model");
+const { SendRegisterEmail } = require("../services/email.services");
 
-async function RegisterController(req,res){
- 
-    const {username , email , password} = req.body
+async function RegisterController(req, res) {
+  const { username, email, password } = req.body;
 
+  const IsUser = await UserModel.findOne({
+    email,
+  });
 
-    const IsUser = await UserModel.findOne({
-        email
-    })
+  if (IsUser) {
+    return res.status(422).json({
+      message: "User Already Exits",
+      status: "Email Already Exits",
+    });
+  }
 
-    if(IsUser){
-        return res.status(422).json({
-        message : "User Already Exits",
-        status : "Email Already Exits"
-        })    
-    }
+  const User = await UserModel.create({
+    username,
+    email,
+    password,
+  });
 
+  const token = jwt.sign({ id: User._id }, process.env.JWT_SECRET, {
+    expiresIn: "1h",
+  });
 
+  res.cookie("token", token);
 
-    
+  res.status(201).json({
+    message: "User Create Sucessfully",
+    user: {
+      id: User._id,
+      password: User.password,
+      email: User.email,
+    },
+  });
 
-
-    const User = await UserModel.create({
-        username,
-        email,
-        password
-    })
-
-
-    const token  = jwt.sign({id : User._id},process.env.JWT_SECRET,{expiresIn: "1h"})
-
-
-    res.cookie('token',token)
-
-
-   
-
-    res.status(201).json({
-       message : "User Create Sucessfully",
-       user : {
-        id : User._id,
-        password : User.password,
-        email : User.email
-       }       
-
-       
-    })
-
-await SendRegisterEmail(User.email,User.username)
-
-
+  await SendRegisterEmail(User.email, User.username);
 }
 
+async function LoginController(req, res) {
+  const { email, password } = req.body;
 
-async function LoginController(req,res){
+  const IsUser = await UserModel.findOne({ email }).select("password");
 
-   const {email,password} = req.body
- 
-
-   const IsUser = await UserModel.findOne({email}).select('password')
-
-   if(!IsUser){
+  if (!IsUser) {
     return res.status(401).json({
-        message : "Invalid User Please Register First"
-    })
-   }
+      message: "Invalid User Please Register First",
+    });
+  }
 
-   const IsPassword = await IsUser.comparePassword(password)
+  const IsPassword = await IsUser.comparePassword(password);
 
-   if(!IsPassword){
-    return res.status(201).json({
-        message  : "Invalid Password"
-    })
-   }
+  if (!IsPassword) {
+    return res.status(401).json({
+      message: "Invalid Password",
+    });
+  }
 
-     const token  = jwt.sign({id : IsUser._id},process.env.JWT_SECRET,{expiresIn: "1h"})
+  const token = jwt.sign({ id: IsUser._id }, process.env.JWT_SECRET, {
+    expiresIn: "1h",
+  });
 
+  res.cookie("token", token);
 
-    res.cookie('token',token)
-
-
-    res.status(200).json({
-       message : "User Login Sucessfully",
-       user : {
-        id : IsUser._id,
-        password :IsUser.password,
-        email : IsUser.email
-       }
-
-       
-    })
-
+  res.status(200).json({
+    message: "User Login Sucessfully",
+    user: {
+      id: IsUser._id,
+      password: IsUser.password,
+      email: IsUser.email,
+    },
+  });
 }
 
-
-module.exports={
-    RegisterController,
-    LoginController
-}
+module.exports = {
+  RegisterController,
+  LoginController,
+};

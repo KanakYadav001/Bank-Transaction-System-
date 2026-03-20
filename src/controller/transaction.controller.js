@@ -8,9 +8,9 @@ const {
 } = require("../services/email.services");
 
 async function PerformTransaction(req, res) {
-  const { fromAccount, toAccount, amount, idepotencyKey } = req.body;
+  const { fromAccount, toAccount, amount, idempotencyKey } = req.body;
 
-  if (!fromAccount || !toAccount || !amount || !idepotencyKey) {
+  if (!fromAccount || !toAccount || !amount || !idempotencyKey) {
     return res.status(400).json({
       message:
         "fromAccount OR toAccount OR amount OR idepotencyKey is Not Found",
@@ -18,7 +18,7 @@ async function PerformTransaction(req, res) {
   }
 
   const TransactionAlreadyExits = await transactionModel.findOne({
-    idepotencyKey: idepotencyKey,
+    idempotencyKey: idempotencyKey,
   });
 
   if (TransactionAlreadyExits) {
@@ -75,34 +75,40 @@ async function PerformTransaction(req, res) {
   const session = await mongo.startSession();
   session.startTransaction();
 
-  const transaction = await transactionModel.create(
-    {
-      toAccount,
-      fromAccount,
-      status: "PENDING",
-      amount,
-      idepotencyKey,
-    },
+  const [transaction] = await transactionModel.create(
+    [
+      {
+        toAccount,
+        fromAccount,
+        status: "PENDING",
+        amount,
+        idempotencyKey,
+      },
+    ],
     { session },
   );
 
-  const debitLedgerEntery = await LedgerModel.create(
-    {
-      account: fromAccount,
-      amount,
-      transaction: transaction._id,
-      type: "DEBIT",
-    },
+  const [debitLedgerEntery] = await LedgerModel.create(
+    [
+      {
+        account: fromAccount,
+        amount,
+        transaction: transaction._id,
+        type: "DEBIT",
+      },
+    ],
     { session },
   );
 
-  const creditLedgerEntery = await LedgerModel.create(
-    {
-      account: toAccount,
-      amount,
-      transaction: transaction._id,
-      type: "CREDIT",
-    },
+  const [creditLedgerEntery] = await LedgerModel.create(
+    [
+      {
+        account: toAccount,
+        amount,
+        transaction: transaction._id,
+        type: "CREDIT",
+      },
+    ],
     { session },
   );
 
@@ -152,28 +158,26 @@ async function createInitialFundsTransaction(req, res) {
       });
     }
 
-    const toUserAccount = await accountModel.findById({_id : toAccount});
+    const toUserAccount = await accountModel.findById({ _id: toAccount });
     if (!toUserAccount) {
       throw new Error("Invalid Account");
     }
-   
-   
+
     const fromUserAccount = await accountModel.findOne({
-      AccountId : req.user._id,
+      AccountId: req.user._id,
     });
 
     if (!fromUserAccount) {
       throw new Error("System User Account Not Found");
     }
 
-    const transaction = new transactionModel(
-        {
-          fromAccount: fromUserAccount._id,
-          toAccount,
-          status: "PENDING",
-          amount,
-          idempotencyKey,
-        });
+    const transaction = new transactionModel({
+      fromAccount: fromUserAccount._id,
+      toAccount,
+      status: "PENDING",
+      amount,
+      idempotencyKey,
+    });
 
     // 🔹 CREDIT (toAccount)
     await LedgerModel.create(
@@ -185,7 +189,7 @@ async function createInitialFundsTransaction(req, res) {
           type: "CREDIT",
         },
       ],
-      { session }
+      { session },
     );
 
     // 🔹 DEBIT (fromUserAccount) ✅ FIXED
@@ -198,7 +202,7 @@ async function createInitialFundsTransaction(req, res) {
           type: "DEBIT",
         },
       ],
-      { session }
+      { session },
     );
 
     transaction.status = "COMPLETED";
@@ -220,7 +224,6 @@ async function createInitialFundsTransaction(req, res) {
     });
   }
 }
-
 
 module.exports = {
   createInitialFundsTransaction,

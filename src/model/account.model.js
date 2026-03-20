@@ -1,7 +1,7 @@
 const mongo = require("mongoose");
 const ledgerModel = require("./ledger.model");
 
-const AcountScema = new mongo.Schema(
+const AccountSchema = new mongo.Schema(
   {
     AccountId: {
       type: mongo.Schema.Types.ObjectId,
@@ -13,8 +13,8 @@ const AcountScema = new mongo.Schema(
     status: {
       type: String,
       enum: {
-        values: ["ACTIVE", "FROZEN", "DELEATED"],
-        message: "Accoumt eather active,frozen and deleated",
+        values: ["ACTIVE", "FROZEN", "DELETED"],
+        message: "Account either active, frozen or deleted",
       },
       default: "ACTIVE",
     },
@@ -29,8 +29,8 @@ const AcountScema = new mongo.Schema(
   },
 );
 
-AcountScema.index({ index: 1, status: 1 });
-AcountScema.methods.getBalance = async function () {
+AccountSchema.index({ index: 1, status: 1 });
+AccountSchema.methods.getBalance = async function () {
   const balanceData = await ledgerModel.aggregate([
     { $match: { account: this._id } },
     {
@@ -51,17 +51,17 @@ AcountScema.methods.getBalance = async function () {
     {
       $project: {
         _id: 0,
-        balance: { $subtract: ["$totalCredit","$totalDebit"] },
+        balance: { $subtract: ["$totalCredit", "$totalDebit"] },
       },
     },
   ]);
-  if(balanceData.length === 0){
-    return 0
+  if (balanceData.length === 0) {
+    return 0;
   }
 
-  return balanceData[0].balance
+  return balanceData[0].balance;
 };
 
-const AccountModel = mongo.model("account", AcountScema);
+const AccountModel = mongo.model("account", AccountSchema);
 
 module.exports = AccountModel;
